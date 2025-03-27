@@ -1,0 +1,233 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Firelizard Breeder Game</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+    h1 { color: #c14444; }
+    .firelizard { border: 1px solid #ccc; background: white; padding: 10px; margin: 10px 0; }
+    .tab-button { margin: 5px; padding: 8px 12px; background: #c14444; color: white; border: none; cursor: pointer; }
+    .tab-button:hover { background: #a03636; }
+    .tab { display: none; }
+    .tab.active { display: block; }
+    select, input, button, textarea { margin: 5px; }
+    textarea { width: 100%; height: 80px; }
+  </style>
+</head>
+<body>
+  <h1>Firelizard Breeder Game</h1>
+  <div><strong>Prettyshinies:</strong> <span id="prettyshinies">0</span></div>
+
+  <div>
+    <button class="tab-button" onclick="showTab('adoption')">Adoption Center</button>
+    <button class="tab-button" onclick="showTab('firelizards')">Your Firelizards</button>
+    <button class="tab-button" onclick="showTab('breeding')">Breeding</button>
+    <button class="tab-button" onclick="showTab('importExport')">Import/Export</button>
+    <button class="tab-button" onclick="showTab('shinyseek')">Shinyseek</button>
+    <button class="tab-button" onclick="showTab('genetesting')">Gene Testing</button>
+    <button class="tab-button" onclick="resetGame()">Reset Game</button>
+  </div>
+
+  <div id="adoption" class="tab active"><h2>Adoption Center</h2><button onclick="refreshAdoptionCenter()">Refresh Adoption Center</button><div id="adoptionCenter"></div></div>
+  <div id="firelizards" class="tab"><h2>Your Firelizards</h2><div id="firelizardsList"></div></div>
+  <div id="breeding" class="tab"><h2>Breed Firelizards</h2><select id="parent1"></select><select id="parent2"></select><input id="babyName" placeholder="Baby Name" /><button onclick="breedSelected()">Breed</button></div>
+  <div id="importExport" class="tab"><h2>Import / Export Firelizard</h2><select id="exportSelect"></select><button onclick="exportSelected()">Export</button><textarea id="exportedData" readonly></textarea><textarea id="importedData" placeholder="Paste firelizard JSON here"></textarea><button onclick="importFirelizard()">Import</button></div>
+  <div id="shinyseek" class="tab"><h2>Send a Firelizard Shinyseeking</h2><div id="shinyseekList"></div></div>
+  <div id="genetesting" class="tab"><h2>Gene Testing</h2><p>Gene testing costs 10000 Prettyshinies. Choose a firelizard to reveal its genotype.</p><select id="geneTestSelect"></select><button onclick="geneTestFirelizard()">Test Genes</button></div>
+
+  <script>
+    let game = { prettyshinies: 3000, firelizards: [], adoptionCenter: [] };
+
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function saveGame() { localStorage.setItem("firelizardGame", JSON.stringify(game)); }
+    function loadGame() {
+      const saved = localStorage.getItem("firelizardGame");
+      if (saved) game = JSON.parse(saved);
+      refreshAdoptionCenter(); displayFirelizards();
+    }
+    function resetGame() {
+      if (confirm("Reset your game?")) {
+        localStorage.removeItem("firelizardGame");
+        location.reload();
+      }
+    }
+    function updateUI() {
+      document.getElementById("prettyshinies").textContent = game.prettyshinies;
+      saveGame();
+    }
+
+    function statTotal(stats) {
+      return Object.values(stats).reduce((a, b) => a + b, 0);
+    }
+    function randomStat() {
+      return Math.floor(Math.random() * 20) + 1;
+    }
+    function generateStats() {
+      return {
+        Strength: randomStat(), Intelligence: randomStat(), Charisma: randomStat(),
+        Wisdom: randomStat(), Constitution: randomStat(), Dexterity: randomStat(),
+      };
+    }
+    function randomGene(alleles) {
+      const [a1, a2] = alleles;
+      return [a1[Math.floor(Math.random() * a1.length)], a2[Math.floor(Math.random() * a2.length)]];
+    }
+    function generateGenes() {
+      return {
+        B: randomGene([["B", "b"], ["B", "b"]]), G: randomGene([["G", "g"], ["G", "g"]]),
+        d: randomGene([["d", "D"], ["d", "D"]]), m: randomGene([["m", "M"], ["m", "M"]]),
+        P: randomGene([["P", "p"], ["P", "p"]]), A: randomGene([["A", "a"], ["A", "a"]]),
+        prl: randomGene([["prl", "Prl"], ["prl", "Prl"]]), z: randomGene([["z", "Z"], ["z", "Z"]]),
+        tg: randomGene([["tg", "Tg"], ["tg", "Tg"]]), mo: randomGene([["mo", "Mo"], ["mo", "Mo"]]),
+        u: randomGene([["u", "U"], ["u", "U"]]), po: randomGene([["po", "Po"], ["po", "Po"]]),
+        sp: randomGene([["sp", "Sp"], ["sp", "Sp"]])
+      };
+    }
+
+    function determineColor(genes, sex) {
+      if (genes.B.includes("B")) return "Brown";
+      const metallic = genes.m.every(g => g === "m");
+      const green = genes.G.includes("G");
+      const red = genes.G.every(g => g === "g");
+      const diluted = genes.d.every(g => g === "d");
+      if (metallic) {
+        if (green && diluted) return sex === "female" ? "Silver" : "Chrome";
+        if (green) return sex === "female" ? "Tarnished Gold" : "Tarnished Bronze";
+        if (red && diluted) return sex === "female" ? "Rose Gold" : "Copper";
+        if (red) return sex === "female" ? "Rose Gold" : "Copper";
+        return sex === "female" ? "Gold" : "Bronze";
+      } else {
+        if (green && diluted) return "Blue";
+        if (green) return "Green";
+        if (red && diluted) return "Yellow";
+        if (red) return "Red";
+      }
+      return "Unknown";
+    }
+
+    function createFirelizard(name = "Unnamed") {
+      const stats = generateStats();
+      const genes = generateGenes();
+      const sex = Math.random() < 0.5 ? "male" : "female";
+      const color = determineColor(genes, sex);
+      return { name, stats, genes, sex, color, shinyseeks: 0, genesRevealed: false };
+    }
+
+    function displayFirelizards() {
+      updateUI();
+      const list = document.getElementById("firelizardsList");
+      const seek = document.getElementById("shinyseekList");
+      const p1 = document.getElementById("parent1");
+      const p2 = document.getElementById("parent2");
+      const exp = document.getElementById("exportSelect");
+      const gts = document.getElementById("geneTestSelect");
+      list.innerHTML = seek.innerHTML = p1.innerHTML = p2.innerHTML = exp.innerHTML = gts.innerHTML = "";
+      game.firelizards.forEach((f, i) => {
+        const genes = f.genesRevealed ? JSON.stringify(f.genes) : "?";
+        list.innerHTML += `<div class="firelizard"><strong>${f.name}</strong> (${f.sex})<br>Color: ${f.color}<br>Stats: ${JSON.stringify(f.stats)}<br>Genotype: ${genes}<br><input placeholder="New Name" id="rename-${i}" /><button onclick="renameFirelizard(${i})">Rename</button><button onclick="deleteFirelizard('${f.name}'); displayFirelizards();">Delete</button></div>`;
+        seek.innerHTML += `<div class="firelizard"><strong>${f.name}</strong><br>Seeks: ${f.shinyseeks}/1000<br>Total PS Gained (est): ~${Math.floor(statTotal(f.stats) * 0.1 * f.shinyseeks)}<br><button onclick="shinyseek(game.firelizards[${i}]); displayFirelizards();">Shinyseek</button></div>`;
+        p1.add(new Option(f.name, i)); p2.add(new Option(f.name, i)); exp.add(new Option(f.name, i)); gts.add(new Option(f.name, i));
+      });
+    }
+
+    function shinyseek(f) {
+      if (f.shinyseeks >= 1000) return alert("Too tired to shinyseek.");
+      const gain = Math.floor(statTotal(f.stats) * 0.1);
+      game.prettyshinies += gain;
+      f.shinyseeks++;
+      const statKeys = Object.keys(f.stats);
+      const chosen = statKeys[Math.floor(Math.random() * statKeys.length)];
+      f.stats[chosen] += Math.floor(Math.random() * 4) + 1;
+    }
+
+    function geneTestFirelizard() {
+      const index = document.getElementById("geneTestSelect").value;
+      if (game.prettyshinies >= 10000) {
+        game.prettyshinies -= 10000;
+        game.firelizards[index].genesRevealed = true;
+        displayFirelizards();
+      } else alert("Not enough Prettyshinies!");
+    }
+
+    function renameFirelizard(index) {
+      const input = document.getElementById(`rename-${index}`);
+      const newName = input.value.trim();
+      if (newName) {
+        game.firelizards[index].name = newName;
+        displayFirelizards();
+      }
+    }
+
+    function deleteFirelizard(name) {
+      const i = game.firelizards.findIndex(f => f.name === name);
+      if (i !== -1) game.firelizards.splice(i, 1);
+    }
+
+    function breedSelected() {
+      const i1 = +document.getElementById("parent1").value;
+      const i2 = +document.getElementById("parent2").value;
+      const name = document.getElementById("babyName").value;
+      if (i1 === i2) return alert("Choose two different parents!");
+      if (!name) return alert("Name the baby.");
+      const f1 = game.firelizards[i1], f2 = game.firelizards[i2];
+      if (f1.sex === f2.sex) return alert("Firelizards must be of opposite sexes to breed.");
+      const stats = {}; for (let stat in f1.stats) stats[stat] = Math.floor((f1.stats[stat] + f2.stats[stat]) * 0.1);
+      const genes = {}; for (let gene in f1.genes) genes[gene] = [f1.genes[gene][Math.floor(Math.random()*2)], f2.genes[gene][Math.floor(Math.random()*2)]];
+      const sex = Math.random() < 0.5 ? "male" : "female";
+      const color = determineColor(genes, sex);
+      game.firelizards.push({ name, stats, genes, sex, color, shinyseeks: 0, genesRevealed: false });
+      displayFirelizards();
+    }
+
+    function refreshAdoptionCenter(count = 5) {
+      game.adoptionCenter = [];
+      for (let i = 0; i < count; i++) game.adoptionCenter.push(createFirelizard());
+      displayAdoptionCenter();
+    }
+
+    function displayAdoptionCenter() {
+      const center = document.getElementById("adoptionCenter");
+      center.innerHTML = "";
+      game.adoptionCenter.forEach((f, i) => {
+        const cost = 1000 + 20 * statTotal(f.stats);
+        center.innerHTML += `<div class="firelizard"><strong>${f.name}</strong> (${f.sex})<br>Color: ${f.color}<br>Cost: ${cost} PS<br>Stats: ${JSON.stringify(f.stats)}<br><button onclick="adoptFromAdoptionCenter(${i})">Adopt</button></div>`;
+      });
+    }
+
+    function adoptFromAdoptionCenter(index) {
+      const f = game.adoptionCenter[index];
+      const cost = 1000 + 20 * statTotal(f.stats);
+      if (game.prettyshinies >= cost) {
+        game.prettyshinies -= cost;
+        game.firelizards.push(f);
+        game.adoptionCenter.splice(index, 1);
+        displayFirelizards();
+        displayAdoptionCenter();
+      } else alert("Not enough Prettyshinies!");
+    }
+
+    function exportSelected() {
+      const index = document.getElementById("exportSelect").value;
+      document.getElementById("exportedData").value = JSON.stringify(game.firelizards[index]);
+    }
+
+    function importFirelizard() {
+      try {
+        const data = JSON.parse(document.getElementById("importedData").value);
+        game.firelizards.push(data);
+        document.getElementById("importedData").value = "";
+        displayFirelizards();
+      } catch (e) { alert("Invalid data."); }
+    }
+
+    loadGame();
+  </script>
+</body>
+</html>
