@@ -132,7 +132,7 @@
       game.firelizards.forEach((f, i) => {
         const genes = f.genesRevealed ? JSON.stringify(f.genes) : "?";
         list.innerHTML += `<div class="firelizard"><strong>${f.name}</strong> (${f.sex})<br>Color: ${f.color}<br>Stats: ${JSON.stringify(f.stats)}<br>Genotype: ${genes}<br><input placeholder="New Name" id="rename-${i}" /><button onclick="renameFirelizard(${i})">Rename</button><button onclick="deleteFirelizard('${f.name}'); displayFirelizards();">Delete</button></div>`;
-        seek.innerHTML += `<div class="firelizard"><strong>${f.name}</strong><br>Seeks: ${f.shinyseeks}/1000<br>Total PS Gained (est): ~${Math.floor(statTotal(f.stats) * 0.1 * f.shinyseeks)}<br><button onclick="shinyseek(game.firelizards[${i}]); displayFirelizards();">Shinyseek</button></div>`;
+        seek.innerHTML += `<div class="firelizard"><strong>${f.name}</strong><br>Seeks: ${f.shinyseeks}/1000<br>Lifetime Score : ~${Math.floor(statTotal(f.stats) * 0.1 * f.shinyseeks)}<br><button onclick="shinyseek(game.firelizards[${i}]); displayFirelizards();">Shinyseek</button></div>`;
         p1.add(new Option(f.name, i)); p2.add(new Option(f.name, i)); exp.add(new Option(f.name, i)); gts.add(new Option(f.name, i));
       });
     }
